@@ -1,0 +1,544 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101827">
+  <meta name="description" content="Play Number Merge, a free number puzzle game. Merge tiles, beat your best score and challenge your brain.">
+  <title>Number Merge - Free Puzzle Game</title>
+
+  <style>
+    :root {
+      --bg: #101827;
+      --panel: #1b2638;
+      --text: #f7f9ff;
+      --muted: #aab7cc;
+      --accent: #7c5cff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 24px 14px 40px;
+      font-family: system-ui, Arial, sans-serif;
+      color: var(--text);
+      background: radial-gradient(circle at top, #293758, var(--bg) 60%);
+    }
+
+    main {
+      max-width: 460px;
+      margin: auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 22px;
+    }
+
+    h1 {
+      font-size: clamp(2.2rem, 9vw, 3rem);
+      margin: 8px 0;
+    }
+
+    header p,
+    .hint {
+      color: var(--muted);
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid #35415a;
+      border-radius: 18px;
+      padding: 15px;
+      margin-bottom: 15px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      text-align: center;
+    }
+
+    .stat-label {
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    .stat-value {
+      font-size: 1.7rem;
+      font-weight: 800;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      padding: 9px;
+      border-radius: 15px;
+      background: #0b1220;
+      touch-action: none;
+      user-select: none;
+    }
+
+    .tile {
+      aspect-ratio: 1;
+      min-width: 0;
+      display: grid;
+      place-items: center;
+      border-radius: 10px;
+      background: #29364c;
+      color: white;
+      font-size: clamp(1.1rem, 6vw, 1.7rem);
+      font-weight: 850;
+      overflow: hidden;
+    }
+
+    .tile[data-value="2"] { background: #6653d9; }
+    .tile[data-value="4"] { background: #426bd7; }
+    .tile[data-value="8"] { background: #168b9b; }
+    .tile[data-value="16"] { background: #13866e; }
+    .tile[data-value="32"] { background: #bd7a27; }
+    .tile[data-value="64"] { background: #d15a47; }
+    .tile[data-value="128"],
+    .tile[data-value="256"],
+    .tile[data-value="512"] { background: #c34789; }
+    .tile[data-value="1024"],
+    .tile[data-value="2048"] {
+      background: #e0ac32;
+      color: #172033;
+      font-size: clamp(0.95rem, 5vw, 1.5rem);
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    button {
+      flex: 1;
+      border: 0;
+      border-radius: 12px;
+      padding: 13px 10px;
+      color: white;
+      background: var(--accent);
+      font-weight: 750;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      background: #35415a;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    button:focus-visible {
+      outline: 3px solid white;
+      outline-offset: 3px;
+    }
+
+    #message {
+      min-height: 25px;
+      margin: 12px 0 0;
+      text-align: center;
+      color: #f5d77b;
+      font-weight: 700;
+    }
+
+    .hint {
+      font-size: 0.92rem;
+      line-height: 1.6;
+    }
+
+    .ad-slot {
+      min-height: 75px;
+      display: grid;
+      place-items: center;
+      border: 1px dashed #526078;
+      border-radius: 12px;
+      color: var(--muted);
+      text-align: center;
+      padding: 12px;
+      font-size: 0.85rem;
+    }
+
+    footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.8rem;
+      margin-top: 24px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        transition: none !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main>
+    <header>
+      <div aria-hidden="true">🧩 ✨</div>
+      <h1>Number Merge</h1>
+      <p>Merge numbers. Beat your best. Keep thinking!</p>
+    </header>
+
+    <section class="panel stats" aria-label="Game scores">
+      <div>
+        <div class="stat-label">SCORE</div>
+        <div class="stat-value" id="score">0</div>
+      </div>
+
+      <div>
+        <div class="stat-label">BEST</div>
+        <div class="stat-value" id="best">0</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div
+        id="board"
+        class="board"
+        role="group"
+        aria-label="Number puzzle board"
+      ></div>
+
+      <p id="message" role="status" aria-live="polite">
+        Combine matching numbers to grow!
+      </p>
+
+      <div class="controls">
+        <button id="newGame" type="button">New Game</button>
+        <button id="undo" class="secondary" type="button" disabled>
+          Undo
+        </button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <strong>How to Play</strong>
+      <p class="hint">
+        Use the arrow keys or swipe to move all tiles.
+        Matching numbers merge into one bigger number.
+        Earn points and reach 2048. The game ends when
+        no more moves are possible.
+      </p>
+    </section>
+
+    <section class="panel">
+      <div class="ad-slot">
+        Advertisement space<br>
+        Ads may appear here in the future.
+      </div>
+    </section>
+
+    <footer>
+      Number Merge &middot; Free Browser Puzzle Game
+    </footer>
+  </main>
+
+  <script>
+    "use strict";
+
+    (() => {
+      const SIZE = 4;
+      const TOTAL = SIZE * SIZE;
+
+      const boardEl = document.getElementById("board");
+      const scoreEl = document.getElementById("score");
+      const bestEl = document.getElementById("best");
+      const messageEl = document.getElementById("message");
+      const undoBtn = document.getElementById("undo");
+
+      let board = Array(TOTAL).fill(0);
+      let score = 0;
+      let best = loadBest();
+      let previous = null;
+      let over = false;
+      let won = false;
+
+      function loadBest() {
+        try {
+          return Number(
+            localStorage.getItem("numberMergeBest")
+          ) || 0;
+        } catch {
+          return 0;
+        }
+      }
+
+      function saveBest() {
+        try {
+          localStorage.setItem(
+            "numberMergeBest",
+            String(best)
+          );
+        } catch {
+          // The game still works without local storage.
+        }
+      }
+
+      function saveUndo() {
+        previous = {
+          board: [...board],
+          score: score,
+          over: over,
+          won: won
+        };
+
+        undoBtn.disabled = false;
+      }
+
+      function restoreUndo() {
+        if (!previous) return;
+
+        board = [...previous.board];
+        score = previous.score;
+        over = previous.over;
+        won = previous.won;
+
+        previous = null;
+        undoBtn.disabled = true;
+
+        render();
+        messageEl.textContent = "Previous move restored.";
+      }
+
+      function addTile() {
+        const empty = [];
+
+        board.forEach((value, index) => {
+          if (value === 0) empty.push(index);
+        });
+
+        if (empty.length === 0) return;
+
+        const index = empty[
+          Math.floor(Math.random() * empty.length)
+        ];
+
+        board[index] = Math.random() < 0.9 ? 2 : 4;
+      }
+
+      function render() {
+        boardEl.innerHTML = "";
+
+        board.forEach(value => {
+          const tile = document.createElement("div");
+
+          tile.className = "tile";
+          tile.textContent = value ? String(value) : "";
+
+          if (value) {
+            tile.dataset.value = String(value);
+          }
+
+          tile.setAttribute(
+            "aria-label",
+            value ? String(value) : "Empty"
+          );
+
+          boardEl.appendChild(tile);
+        });
+
+        scoreEl.textContent = score.toLocaleString("en-US");
+        bestEl.textContent = best.toLocaleString("en-US");
+      }
+
+      function getLines(direction) {
+        const lines = [];
+
+        for (let i = 0; i < SIZE; i++) {
+          const line = [];
+
+          for (let j = 0; j < SIZE; j++) {
+            if (direction === "left") {
+              line.push(i * SIZE + j);
+            } else if (direction === "right") {
+              line.push(i * SIZE + (SIZE - 1 - j));
+            } else if (direction === "up") {
+              line.push(j * SIZE + i);
+            } else if (direction === "down") {
+              line.push((SIZE - 1 - j) * SIZE + i);
+            }
+          }
+
+          lines.push(line);
+        }
+
+        return lines;
+      }
+
+      function hasMoves() {
+        if (board.includes(0)) return true;
+
+        for (let row = 0; row < SIZE; row++) {
+          for (let col = 0; col < SIZE; col++) {
+            const index = row * SIZE + col;
+
+            if (
+              col < SIZE - 1 &&
+              board[index] === board[index + 1]
+            ) {
+              return true;
+            }
+
+            if (
+              row < SIZE - 1 &&
+              board[index] === board[index + SIZE]
+            ) {
+              return true;
+            }
+          }
+        }
+
+        return false;
+      }
+
+      function move(direction) {
+        if (over) return;
+
+        const before = [...board];
+        let gained = 0;
+
+        for (const line of getLines(direction)) {
+          const values = line
+            .map(index => board[index])
+            .filter(value => value !== 0);
+
+          const merged = [];
+
+          for (let i = 0; i < values.length; i++) {
+            if (values[i] === values[i + 1]) {
+              const newValue = values[i] * 2;
+
+              merged.push(newValue);
+              gained += newValue;
+              i++;
+            } else {
+              merged.push(values[i]);
+            }
+          }
+
+          while (merged.length < SIZE) {
+            merged.push(0);
+          }
+
+          line.forEach((index, i) => {
+            board[index] = merged[i];
+          });
+        }
+
+        // Do not consume a turn when nothing changes.
+        if (board.every((value, i) => value === before[i])) {
+          return;
+        }
+
+        saveUndo();
+        score += gained;
+
+        if (score > best) {
+          best = score;
+          saveBest();
+        }
+
+        addTile();
+        render();
+
+        if (!won && board.includes(2048)) {
+          won = true;
+          messageEl.textContent =
+            "Amazing! You reached 2048!";
+        } else if (gained > 0) {
+          messageEl.textContent =
+            `Great merge! +${gained} points.`;
+        } else {
+          messageEl.textContent = "Nice move! Keep going.";
+        }
+
+        if (!hasMoves()) {
+          over = true;
+          messageEl.textContent =
+            `Game over! Final score: ${score}.`;
+        }
+      }
+
+      function newGame() {
+        board = Array(TOTAL).fill(0);
+        score = 0;
+        previous = null;
+        over = false;
+        won = false;
+
+        addTile();
+        addTile();
+
+        undoBtn.disabled = true;
+        messageEl.textContent =
+          "Combine matching numbers to grow!";
+
+        render();
+      }
+
+      document.addEventListener("keydown", event => {
+        const keys = {
+          ArrowLeft: "left",
+          ArrowRight: "right",
+          ArrowUp: "up",
+          ArrowDown: "down"
+        };
+
+        if (keys[event.key]) {
+          event.preventDefault();
+          move(keys[event.key]);
+        }
+      });
+
+      let touchStartX = 0;
+      let touchStartY = 0;
+
+      boardEl.addEventListener("touchstart", event => {
+        const touch = event.changedTouches[0];
+        touchStartX = touch.clientX;
+        touchStartY = touch.clientY;
+      }, { passive: true });
+
+      boardEl.addEventListener("touchend", event => {
+        const touch = event.changedTouches[0];
+        const dx = touch.clientX - touchStartX;
+        const dy = touch.clientY - touchStartY;
+
+        if (Math.max(Math.abs(dx), Math.abs(dy)) < 25) {
+          return;
+        }
+
+        if (Math.abs(dx) > Math.abs(dy)) {
+          move(dx > 0 ? "right" : "left");
+        } else {
+          move(dy > 0 ? "down" : "up");
+        }
+      }, { passive: true });
+
+      document
+        .getElementById("newGame")
+        .addEventListener("click", newGame);
+
+      undoBtn.addEventListener("click", restoreUndo);
+
+      newGame();
+    })();
+  </script>
+</body>
+</html>
